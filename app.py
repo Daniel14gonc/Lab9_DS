@@ -5,6 +5,8 @@ import calendar
 
 df = pd.read_csv('importacion_regular.csv')
 df['Fecha'] = pd.to_datetime(df['Fecha'], format='%Y-%m-%d')
+pred_df = pd.read_csv('importacion_regular_test.csv')
+pred_df['Fecha'] = pd.to_datetime(pred_df['Fecha'], format='%Y-%m-%d')
 meses_dict = {i: calendar.month_name[i] for i in range(1, 13)}
 meses_dict_sorted = {v: k for k, v in enumerate(calendar.month_name)}
 
@@ -42,8 +44,24 @@ app.layout = html.Div([
 )
 def update_time_series_graph(relayoutData, selected_years):
     filtered_df = df[(df['Fecha'].dt.year >= selected_years[0]) & (df['Fecha'].dt.year <= selected_years[1])]
-    figura = px.line(filtered_df, x='Fecha', y='Gasolina_regular', title='Serie de Tiempo')
-    figura.update_traces(line=dict(color='#153B50'))
+
+    merged_df = pd.merge(filtered_df, pred_df, on='Fecha', how='left')
+    merged_df['Gasolina_regular_pred'] = merged_df['Gasolina regular']
+    merged_df.drop(columns=['Gasolina regular'], inplace=True)
+
+    figura = px.line(merged_df, x='Fecha', y=['Gasolina_regular', 'Gasolina_regular_pred'], 
+                     title='Gasolina regular importada en galones', labels={'Gasolina_regular': 'Gasolina Completa', 'Gasolina_regular_pred': 'Gasolina regular predicha'})
+
+    # figura = px.line(filtered_df, x='Fecha', y='Gasolina_regular', title='Serie de Tiempo')
+    # figura.update_traces(line=dict(color='#153B50'))
+    figura.update_traces(line=dict(color='#429EA6'), selector=dict(name='Gasolina_regular'))
+    figura.update_traces(line=dict(color='#CC998D'), selector=dict(name='Gasolina_regular_pred'))
+    
+    figura.update_traces(line=dict(color='#429EA6'), selector=dict(name='Gasolina_regular'), 
+                         name='Gasolina Regular')
+    figura.update_traces(line=dict(color='#CC998D'), selector=dict(name='Gasolina_regular_pred'), 
+                         name='Gasolina Regular Predicha')
+    figura.update_yaxes(title_text='Galones importados')
     return figura
 
 def get_monthly_data(df):
@@ -75,7 +93,7 @@ def update_bar_chart(relayoutData, selected_years):
     filtered_df = df[(df['Fecha'].dt.year >= selected_years[0]) & (df['Fecha'].dt.year <= selected_years[1])]
     df_monthly = get_monthly_data(filtered_df)
     figura = px.bar(df_monthly, x=df_monthly['Month'], y='Gasolina_regular', title='Gráfico de Barras (Promedio Mensual)')
-    figura.update_traces(marker_color='#429EA6')
+    figura.update_traces(marker_color='#153B50')
     return figura
 
 if __name__ == '__main__':
